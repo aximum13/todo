@@ -1,19 +1,20 @@
 document.addEventListener("DOMContentLoaded", function () {
   let listTodo = [],
     listName = "x";
+
   let inputTodo = document.querySelector(".new-todo");
   let inputAllTodo = document.querySelector(".toggle-all");
-  let count = 0;
   let todoList = document.querySelector(".todo-list");
   let footer = document.querySelector(".footer");
-  let itemLeft = document.querySelector(".todo-count");
+  let countText = document.querySelector(".todo-count");
   let clearCompletedTodo = document.querySelector(".clear-completed");
   let allTodo = document.querySelector(".all-todo");
   let activeTodo = document.querySelector(".active-todo");
   let completeTodo = document.querySelector(".complete-todo");
 
+  let count = 0;
   let allDone = true;
-  let localData = localStorage.getItem(listName); // получаем сохраненные данные из локального хранилища в виде строки;
+  let localData = localStorage.getItem(listName);
 
   function createTodoItem(obj) {
     let item = document.createElement("li");
@@ -33,26 +34,23 @@ document.addEventListener("DOMContentLoaded", function () {
     item.append(label);
     item.append(deleteButton);
 
-    // if (obj.done == true) item.classList.add("list-group-item-success"); // если у объекта стоит статус "Выполнен", то выделяем фон зелёным цветом
-
     doneButton.addEventListener("click", function () {
       item.classList.toggle("completed");
 
       for (const listItem of listTodo) {
         if (listItem.id == obj.id) {
           listItem.done = !listItem.done;
-
           if (listItem.done && count > 0) {
             count -= 1;
-            itemLeft.textContent = count + " items left";
-          } else count += 1;
-          itemLeft.textContent = count + " items left";
-
-          if (count == 1) {
-            itemLeft.textContent = "1 item left"; // change text content to "1 item left" when count is 1
           } else {
-            itemLeft.textContent = count + " items left";
+            count += 1;
           }
+
+          if (!listItem.done) inputAllTodo.checked = false;
+
+          countText.textContent = count + " items left";
+
+          countVal();
         }
       }
 
@@ -70,6 +68,15 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
+      let isAllCompleted = Array.from(todoList.querySelectorAll("li")).every(
+        function (li) {
+          return li.classList.contains("completed");
+        }
+      );
+      if (isAllCompleted) {
+        inputAllTodo.checked = true;
+      }
+
       saveList(listTodo, listName);
     });
 
@@ -82,22 +89,15 @@ document.addEventListener("DOMContentLoaded", function () {
         count = 0;
       }
 
-      itemLeft.textContent = count + " items left";
+      countText.textContent = count + " items left";
 
-      if (count == 1) {
-        itemLeft.textContent = "1 item left";
-      } else {
-        itemLeft.textContent = count + " items left";
-      }
+      countVal();
 
       for (let i = 0; i < listTodo.length; i++) {
-        if (listTodo[i].id == obj.id) listTodo.splice(i, 1); // если id проверяемых элементов совпадают, то из массива всех дел удаляется данный элемент
+        if (listTodo[i].id == obj.id) listTodo.splice(i, 1);
       }
 
-      if (listTodo.length === 0) {
-        footer.style.display = "none";
-        inputAllTodo.nextElementSibling.style.display = "none";
-      }
+      clearFooter();
 
       saveList(listTodo, listName);
     });
@@ -110,26 +110,39 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   }
 
+  function countVal() {
+    if (count == 1) {
+      countText.textContent = "1 item left";
+    } else {
+      countText.textContent = count + " items left";
+    }
+  }
+
+  function clearFooter() {
+    if (listTodo.length === 0) {
+      footer.style.display = "none";
+      inputAllTodo.nextElementSibling.style.display = "none";
+    }
+  }
+
   function getNewID(arg) {
     let max = 0;
     for (let item of arg) {
       if (item.id > max) max = item.id;
     }
-    return max + 1; // задаём id каждому объекту задачи
+    return max + 1;
   }
 
   function saveList(arg, key) {
-    localStorage.setItem(key, JSON.stringify(arg)); // сохраняем данные в локальное хранилище в виде "ключ - значение"
+    localStorage.setItem(key, JSON.stringify(arg));
   }
 
   if (localData !== null && localData !== "") {
-    listTodo = JSON.parse(localData); // преобразуем данные из строки в объект
+    listTodo = JSON.parse(localData);
   }
 
-  if (listTodo.length === 0) {
-    footer.style.display = "none";
-    inputAllTodo.nextElementSibling.style.display = "none";
-  }
+  clearFooter();
+
   for (let item of listTodo) {
     let todoItem = createTodoItem(item);
 
@@ -140,14 +153,16 @@ document.addEventListener("DOMContentLoaded", function () {
       allDone = false;
     }
 
+     if (!item.done) count += 1;
+     countVal();
+
     todoList.append(todoItem.item);
   }
 
   inputAllTodo.checked = allDone;
 
   listTodo.forEach(function (item) {
-    if (!item.done) count += 1;
-    itemLeft.textContent = count + " items left";
+   
   });
 
   inputAllTodo.addEventListener("click", function () {
@@ -168,7 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
 
-      itemLeft.textContent = count + " items left";
+      countText.textContent = count + " items left";
       saveList(listTodo, listName);
     });
   });
@@ -193,19 +208,23 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     count += 1;
-    if (count == 1) {
-      itemLeft.textContent = "1 item left";
-    } else {
-      itemLeft.textContent = count + " items left";
-    }
+
+    countVal();
 
     let todoItem = createTodoItem(newItem);
     listTodo.push(newItem);
 
     saveList(listTodo, listName);
-    console.log(listTodo);
     todoList.append(todoItem.item);
     inputTodo.value = "";
+
+    if (completeTodo.classList.contains("selected")) {
+      todoItem.item.style.display = "none";
+    }
+
+    if (inputAllTodo.checked == true) {
+      inputAllTodo.checked = false;
+    }
   });
 
   clearCompletedTodo.addEventListener("click", function () {
@@ -226,16 +245,9 @@ document.addEventListener("DOMContentLoaded", function () {
     listTodo = listTodo.filter((item) => !doneItems.includes(item.id));
     count = listTodo.filter((item) => !item.done).length;
 
-    if (count == 1) {
-      itemLeft.textContent = "1 item left";
-    } else {
-      itemLeft.textContent = count + " items left";
-    }
+    countVal();
 
-    if (listTodo.length === 0) {
-      footer.style.display = "none";
-      inputAllTodo.nextElementSibling.style.display = "none";
-    }
+    clearFooter();
 
     saveList(listTodo, listName);
   });
@@ -251,8 +263,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  console.log(todoList.children);
-
   activeTodo.addEventListener("click", function () {
     allTodo.classList.remove("selected");
     activeTodo.classList.add("selected");
@@ -260,7 +270,6 @@ document.addEventListener("DOMContentLoaded", function () {
     let todoItems = document.querySelectorAll(".todo-item");
 
     todoItems.forEach(function (li) {
-      console.log(li);
       if (li.classList.contains("completed")) {
         li.style.display = "none";
       } else {
@@ -276,7 +285,6 @@ document.addEventListener("DOMContentLoaded", function () {
     let todoItems = document.querySelectorAll(".todo-item");
 
     todoItems.forEach(function (li) {
-      console.log(li);
       if (li.classList.contains("completed")) {
         li.style.display = "block";
       } else {
@@ -284,5 +292,4 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
-  console.log(allTodo, activeTodo, completeTodo);
 });
