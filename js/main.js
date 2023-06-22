@@ -54,19 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      if (activeTodo.classList.contains("selected")) {
-        if (item.classList.contains("completed")) {
-          item.style.display = "none";
-        } else {
-          item.style.display = "block";
-        }
-      } else if (completeTodo.classList.contains("selected")) {
-        if (item.classList.contains("completed")) {
-          item.style.display = "block";
-        } else {
-          item.style.display = "none";
-        }
-      }
+      checkItems(item);
 
       let isAllCompleted = Array.from(todoList.querySelectorAll("li")).every(
         function (li) {
@@ -137,6 +125,22 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem(key, JSON.stringify(arg));
   }
 
+  function checkItems(item) {
+    if (activeTodo.classList.contains("selected")) {
+      if (item.classList.contains("completed")) {
+        item.style.display = "none";
+      } else {
+        item.style.display = "block";
+      }
+    } else if (completeTodo.classList.contains("selected")) {
+      if (item.classList.contains("completed")) {
+        item.style.display = "block";
+      } else {
+        item.style.display = "none";
+      }
+    }
+  }
+
   if (localData !== null && localData !== "") {
     listTodo = JSON.parse(localData);
   }
@@ -153,17 +157,13 @@ document.addEventListener("DOMContentLoaded", function () {
       allDone = false;
     }
 
-     if (!item.done) count += 1;
-     countVal();
+    if (!item.done) count += 1;
+    countVal();
 
     todoList.append(todoItem.item);
   }
 
   inputAllTodo.checked = allDone;
-
-  listTodo.forEach(function (item) {
-   
-  });
 
   inputAllTodo.addEventListener("click", function () {
     listTodo.forEach(function (item) {
@@ -181,10 +181,16 @@ document.addEventListener("DOMContentLoaded", function () {
           li.classList.remove("completed");
           li.querySelector(".toggle").checked = false;
         });
+        countVal();
       }
 
-      countText.textContent = count + " items left";
       saveList(listTodo, listName);
+    });
+
+    console.log(todoList);
+
+    todoList.querySelectorAll("li").forEach(function (item) {
+      checkItems(item);
     });
   });
 
