@@ -2,37 +2,42 @@ document.addEventListener("DOMContentLoaded", function () {
   let listTodo = [],
     listName = "x";
 
-  let inputTodo = document.querySelector(".new-todo");
-  let inputAllTodo = document.querySelector(".toggle-all");
-  let todoList = document.querySelector(".todo-list");
-  let footer = document.querySelector(".footer");
-  let countText = document.querySelector(".todo-count");
-  let clearCompletedTodo = document.querySelector(".clear-completed");
-  let allTodo = document.querySelector(".all-todo");
-  let activeTodo = document.querySelector(".active-todo");
-  let completeTodo = document.querySelector(".complete-todo");
+  const inputTodo = document.querySelector(".new-todo");
+  const inputAllTodo = document.querySelector(".toggle-all");
+  const todoList = document.querySelector(".todo-list");
+  const footer = document.querySelector(".footer");
+  const countText = document.querySelector(".todo-count");
+  const clearCompletedTodo = document.querySelector(".clear-completed");
+  const allTodo = document.querySelector(".all-todo");
+  const activeTodo = document.querySelector(".active-todo");
+  const completeTodo = document.querySelector(".complete-todo");
 
-  let count = 0;
   let allDone = true;
   let localData = localStorage.getItem(listName);
 
   function createTodoItem(obj) {
-    let item = document.createElement("li");
-    let doneButton = document.createElement("input");
-    let label = document.createElement("label");
-    let deleteButton = document.createElement("button");
+    const item = document.createElement("li");
+    const viewItem = document.createElement("div");
+    const doneButton = document.createElement("input");
+    const label = document.createElement("label");
+    const deleteButton = document.createElement("button");
+    const inputEdit = document.createElement("input");
 
     item.classList.add("todo-item");
+    viewItem.classList.add("view");
     doneButton.classList.add("toggle");
     doneButton.type = "checkbox";
+    inputEdit.classList.add("edit");
+    inputEdit.type = "text";
     deleteButton.classList.add("destroy");
 
     label.classList.add("todo-text");
     label.textContent = obj.name;
 
-    item.append(doneButton);
-    item.append(label);
-    item.append(deleteButton);
+    viewItem.append(doneButton);
+    viewItem.append(label);
+    viewItem.append(deleteButton);
+    item.append(viewItem);
 
     doneButton.addEventListener("click", function () {
       item.classList.toggle("completed");
@@ -40,17 +45,12 @@ document.addEventListener("DOMContentLoaded", function () {
       for (const listItem of listTodo) {
         if (listItem.id == obj.id) {
           listItem.done = !listItem.done;
-          if (listItem.done && count > 0) {
-            count -= 1;
-          } else {
-            count += 1;
-          }
 
           if (!listItem.done) inputAllTodo.checked = false;
 
-          countText.textContent = count + " items left";
-
-          countVal();
+          countActiveTodo();
+          console.log(countActiveTodo());
+          textCount(countActiveTodo());
         }
       }
 
@@ -71,23 +71,31 @@ document.addEventListener("DOMContentLoaded", function () {
     deleteButton.addEventListener("click", function () {
       item.remove();
 
-      count -= 1;
-      if (count > 0) {
-      } else {
-        count = 0;
-      }
+      countActiveTodo();
+      textCount(countActiveTodo());
 
-      countText.textContent = count + " items left";
-
-      countVal();
-
-      for (let i = 0; i < listTodo.length; i++) {
-        if (listTodo[i].id == obj.id) listTodo.splice(i, 1);
-      }
+      listTodo = listTodo.filter((item) => item.id !== obj.id);
 
       clearFooter();
 
       saveList(listTodo, listName);
+    });
+
+    label.addEventListener("dblclick", function () {
+      item.classList.add("editing");
+      viewItem.style.display = "none";
+      item.append(inputEdit);
+      inputEdit.value = label.textContent;
+      inputEdit.focus();
+      inputEdit.addEventListener("change", function () {
+        obj.name = inputEdit.value;
+        label.textContent = obj.name;
+        viewItem.style.display = "block";
+        item.classList.remove("editing");
+        inputEdit.remove();
+        console.log(obj.name);
+        saveList(listTodo, listName);
+      });
     });
 
     return {
@@ -98,7 +106,7 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   }
 
-  function countVal() {
+  function textCount(count) {
     if (count == 1) {
       countText.textContent = "1 item left";
     } else {
@@ -141,13 +149,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  function countActiveTodo() {
+    let count = 0;
+    todoList.querySelectorAll(".todo-item").forEach(function (elem) {
+      if (!elem.classList.contains("completed")) {
+        count += 1;
+      }
+      console.log(elem, count, !elem.classList.contains("completed"));
+    });
+    return count;
+  }
+
   if (localData !== null && localData !== "") {
     listTodo = JSON.parse(localData);
   }
 
   clearFooter();
 
-  for (let item of listTodo) {
+  for (const item of listTodo) {
     let todoItem = createTodoItem(item);
 
     if (item.done) {
@@ -157,11 +176,12 @@ document.addEventListener("DOMContentLoaded", function () {
       allDone = false;
     }
 
-    if (!item.done) count += 1;
-    countVal();
-
     todoList.append(todoItem.item);
   }
+
+  countActiveTodo();
+  console.log(countActiveTodo());
+  textCount(countActiveTodo());
 
   inputAllTodo.checked = allDone;
 
@@ -169,20 +189,19 @@ document.addEventListener("DOMContentLoaded", function () {
     listTodo.forEach(function (item) {
       if (inputAllTodo.checked) {
         item.done = true;
-        count = 0;
         todoList.querySelectorAll("li").forEach(function (li) {
           li.classList.add("completed");
           li.querySelector(".toggle").checked = true;
         });
       } else {
         item.done = false;
-        count = listTodo.length;
         todoList.querySelectorAll("li").forEach(function (li) {
           li.classList.remove("completed");
           li.querySelector(".toggle").checked = false;
         });
-        countVal();
       }
+      countActiveTodo();
+      textCount(countActiveTodo());
 
       saveList(listTodo, listName);
     });
@@ -201,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    let newItem = {
+    const newItem = {
       id: getNewID(listTodo),
       name: inputTodo.value,
       done: false,
@@ -213,16 +232,15 @@ document.addEventListener("DOMContentLoaded", function () {
       inputAllTodo.checked = false;
     }
 
-    count += 1;
-
-    countVal();
-
     let todoItem = createTodoItem(newItem);
     listTodo.push(newItem);
 
     saveList(listTodo, listName);
     todoList.append(todoItem.item);
     inputTodo.value = "";
+
+    countActiveTodo();
+    textCount(countActiveTodo());
 
     if (completeTodo.classList.contains("selected")) {
       todoItem.item.style.display = "none";
@@ -234,24 +252,12 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   clearCompletedTodo.addEventListener("click", function () {
-    let doneItems = [];
-    for (let i = 0; i < listTodo.length; i++) {
-      if (listTodo[i].done == true) {
-        doneItems.push(listTodo[i].id);
-      }
-    }
+    listTodo = listTodo.filter((item) => !item.done);
 
-    for (let i = todoList.children.length - 1; i >= 0; i--) {
-      let element = todoList.children[i];
-      if (element.classList.contains("completed")) {
-        element.remove();
-      }
-    }
+    todoList.querySelectorAll(".completed").forEach((elem) => elem.remove());
 
-    listTodo = listTodo.filter((item) => !doneItems.includes(item.id));
-    count = listTodo.filter((item) => !item.done).length;
-
-    countVal();
+    countActiveTodo();
+    textCount(countActiveTodo());
 
     clearFooter();
 
