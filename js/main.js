@@ -43,36 +43,26 @@ document.addEventListener("DOMContentLoaded", function () {
       item.classList.toggle("completed");
 
       for (const listItem of listTodo) {
-        if (listItem.id == obj.id) {
+        if (listItem.id === obj.id) {
           listItem.done = !listItem.done;
 
           if (!listItem.done) inputAllTodo.checked = false;
-
-          countActiveTodo();
-          console.log(countActiveTodo());
-          textCount(countActiveTodo());
         }
       }
+
+      textCount(countActiveTodo());
 
       checkItems(item);
 
-      let isAllCompleted = Array.from(todoList.querySelectorAll("li")).every(
-        function (li) {
-          return li.classList.contains("completed");
-        }
+      inputAllTodo.checked = Array.from(todoList.querySelectorAll("li")).every(
+        (li) => li.classList.contains("completed")
       );
-      if (isAllCompleted) {
-        inputAllTodo.checked = true;
-      }
 
       saveList(listTodo, listName);
     });
 
     deleteButton.addEventListener("click", function () {
       item.remove();
-
-      countActiveTodo();
-      textCount(countActiveTodo());
 
       listTodo = listTodo.filter((item) => item.id !== obj.id);
 
@@ -90,11 +80,11 @@ document.addEventListener("DOMContentLoaded", function () {
       inputEdit.addEventListener("change", function () {
         obj.name = inputEdit.value;
         label.textContent = obj.name;
-        viewItem.style.display = "block";
-        item.classList.remove("editing");
-        inputEdit.remove();
-        console.log(obj.name);
-        saveList(listTodo, listName);
+        blurInputEdit(viewItem, item, inputEdit);
+      });
+
+      inputEdit.addEventListener("blur", function () {
+        blurInputEdit(viewItem, item, inputEdit);
       });
     });
 
@@ -107,11 +97,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function textCount(count) {
-    if (count == 1) {
-      countText.textContent = "1 item left";
-    } else {
-      countText.textContent = count + " items left";
-    }
+    countText.textContent = `${count} item${count !== 1 ? "s" : ""} left`;
   }
 
   function clearFooter() {
@@ -135,82 +121,71 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function checkItems(item) {
     if (activeTodo.classList.contains("selected")) {
-      if (item.classList.contains("completed")) {
-        item.style.display = "none";
-      } else {
-        item.style.display = "block";
-      }
+      item.style.display = item.classList.contains("completed")
+        ? "none"
+        : "block";
     } else if (completeTodo.classList.contains("selected")) {
-      if (item.classList.contains("completed")) {
-        item.style.display = "block";
-      } else {
-        item.style.display = "none";
-      }
+      item.style.display = item.classList.contains("completed")
+        ? "block"
+        : "none";
     }
   }
 
   function countActiveTodo() {
-    let count = 0;
-    todoList.querySelectorAll(".todo-item").forEach(function (elem) {
-      if (!elem.classList.contains("completed")) {
-        count += 1;
+    return todoList.querySelectorAll(".todo-item:not(.completed)").length;
+  }
+
+  function blurInputEdit(viewItem, item, inputEdit) {
+    viewItem.style.display = "block";
+    item.classList.remove("editing");
+    inputEdit.remove();
+    saveList(listTodo, listName);
+  }
+
+  function initialization() {
+    const localData = localStorage.getItem(listName);
+
+    if (localData) {
+      listTodo = JSON.parse(localData);
+
+      for (const item of listTodo) {
+        let todoItem = createTodoItem(item);
+
+        if (item.done) {
+          todoItem.doneButton.checked = true;
+          todoItem.item.classList.toggle("completed");
+        } else {
+          allDone = false;
+        }
+
+        todoList.append(todoItem.item);
       }
-      console.log(elem, count, !elem.classList.contains("completed"));
-    });
-    return count;
-  }
-
-  if (localData !== null && localData !== "") {
-    listTodo = JSON.parse(localData);
-  }
-
-  clearFooter();
-
-  for (const item of listTodo) {
-    let todoItem = createTodoItem(item);
-
-    if (item.done) {
-      todoItem.doneButton.checked = true;
-      todoItem.item.classList.toggle("completed");
-    } else {
-      allDone = false;
     }
 
-    todoList.append(todoItem.item);
+    textCount(countActiveTodo());
+    clearFooter();
+    inputAllTodo.checked = allDone;
   }
-
-  countActiveTodo();
-  console.log(countActiveTodo());
-  textCount(countActiveTodo());
-
-  inputAllTodo.checked = allDone;
 
   inputAllTodo.addEventListener("click", function () {
     listTodo.forEach(function (item) {
-      if (inputAllTodo.checked) {
-        item.done = true;
-        todoList.querySelectorAll("li").forEach(function (li) {
+      item.done = inputAllTodo.checked;
+      todoList.querySelectorAll(".todo-item").forEach(function (li) {
+        if (inputAllTodo.checked) {
           li.classList.add("completed");
-          li.querySelector(".toggle").checked = true;
-        });
-      } else {
-        item.done = false;
-        todoList.querySelectorAll("li").forEach(function (li) {
+        } else {
           li.classList.remove("completed");
-          li.querySelector(".toggle").checked = false;
-        });
-      }
-      countActiveTodo();
-      textCount(countActiveTodo());
-
-      saveList(listTodo, listName);
+        }
+        li.querySelector(".toggle").checked = inputAllTodo.checked;
+      });
     });
-
-    console.log(todoList);
 
     todoList.querySelectorAll("li").forEach(function (item) {
       checkItems(item);
     });
+
+    textCount(countActiveTodo());
+    saveList(listTodo, listName);
   });
 
   inputTodo.addEventListener("change", function (e) {
@@ -232,21 +207,20 @@ document.addEventListener("DOMContentLoaded", function () {
       inputAllTodo.checked = false;
     }
 
-    let todoItem = createTodoItem(newItem);
+    const todoItem = createTodoItem(newItem);
     listTodo.push(newItem);
 
     saveList(listTodo, listName);
     todoList.append(todoItem.item);
     inputTodo.value = "";
 
-    countActiveTodo();
     textCount(countActiveTodo());
 
     if (completeTodo.classList.contains("selected")) {
       todoItem.item.style.display = "none";
     }
 
-    if (inputAllTodo.checked == true) {
+    if (inputAllTodo.checked === true) {
       inputAllTodo.checked = false;
     }
   });
@@ -255,9 +229,6 @@ document.addEventListener("DOMContentLoaded", function () {
     listTodo = listTodo.filter((item) => !item.done);
 
     todoList.querySelectorAll(".completed").forEach((elem) => elem.remove());
-
-    countActiveTodo();
-    textCount(countActiveTodo());
 
     clearFooter();
 
@@ -268,7 +239,7 @@ document.addEventListener("DOMContentLoaded", function () {
     allTodo.classList.add("selected");
     activeTodo.classList.remove("selected");
     completeTodo.classList.remove("selected");
-    let todoItems = document.querySelectorAll(".todo-item");
+    const todoItems = document.querySelectorAll(".todo-item");
 
     todoItems.forEach(function (li) {
       li.style.display = "block";
@@ -279,14 +250,10 @@ document.addEventListener("DOMContentLoaded", function () {
     allTodo.classList.remove("selected");
     activeTodo.classList.add("selected");
     completeTodo.classList.remove("selected");
-    let todoItems = document.querySelectorAll(".todo-item");
+    const todoItems = document.querySelectorAll(".todo-item");
 
     todoItems.forEach(function (li) {
-      if (li.classList.contains("completed")) {
-        li.style.display = "none";
-      } else {
-        li.style.display = "block";
-      }
+      li.style.display = li.classList.contains("completed") ? "none" : "block";
     });
   });
 
@@ -294,14 +261,12 @@ document.addEventListener("DOMContentLoaded", function () {
     allTodo.classList.remove("selected");
     activeTodo.classList.remove("selected");
     completeTodo.classList.add("selected");
-    let todoItems = document.querySelectorAll(".todo-item");
+    const todoItems = document.querySelectorAll(".todo-item");
 
-    todoItems.forEach(function (li) {
-      if (li.classList.contains("completed")) {
-        li.style.display = "block";
-      } else {
-        li.style.display = "none";
-      }
-    });
+   todoItems.forEach(function (li) {
+     li.style.display = li.classList.contains("completed") ? "block" : "none";
+   });
   });
+
+  initialization();
 });
